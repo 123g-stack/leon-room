@@ -1,0 +1,880 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"/>
+    <title>Leon AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=JetBrains+Mono:wght@300;400&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet"/>
+    <!-- KaTeX, Mermaid and abcjs are all lazy-loaded on first use to reduce memory -->
+    <!-- KaTeX loader is in code-renders.js: _loadKatexIfNeeded() -->
+
+    <!-- Extended renderer styles -->
+    <link rel="stylesheet" href="css/latex.css"/>
+    <link rel="stylesheet" href="css/code-renders.css"/>
+    <link rel="stylesheet" href="css/base.css"/>
+    <link rel="stylesheet" href="css/sidebar.css"/>
+    <link rel="stylesheet" href="css/topbar.css"/>
+    <link rel="stylesheet" href="css/chat.css"/>
+    <link rel="stylesheet" href="css/input.css"/>
+    <link rel="stylesheet" href="css/ui.css"/>
+    <link rel="stylesheet" href="css/worldbook.css"/>
+    <link rel="stylesheet" href="css/prompteditor.css"/>
+    <link rel="stylesheet" href="css/proactive.css"/>
+    <link rel="stylesheet" href="css/thinking-chain.css"/>
+    <link rel="stylesheet" href="css/translate-chain.css"/>
+    <link rel="stylesheet" href="css/bubble-studio.css"/>
+    <link rel="stylesheet" href="css/inputbar-studio.css"/>
+    <link rel="stylesheet" href="css/input-panel.css"/>
+    <link rel="stylesheet" href="css/mini-theater.css"/>
+    <link rel="stylesheet" href="css/sidebar-studio.css"/>
+    <link rel="stylesheet" href="css/menu-studio.css"/>
+    <link rel="stylesheet" href="css/message-features.css"/>
+    <link rel="stylesheet" href="css/msg-image.css"/>
+    <link rel="stylesheet" href="css/tts.css"/>
+    <link rel="stylesheet" href="css/agency.css"/>
+    <!-- 视频输入 -->
+    <link rel="stylesheet" href="css/video-input.css"/>
+    <!-- 时光机 -->
+    <link rel="stylesheet" href="css/timemachine.css"/>
+    <!-- 群聊 / 审批面板 -->
+    <link rel="stylesheet" href="css/update-panel.css"/>
+    <!-- 书架 -->
+    <link rel="stylesheet" href="css/bookshelf.css"/>
+    <link rel="stylesheet" href="css/study.css"/>
+    <!-- 文生图 / 图库 -->
+    <link rel="stylesheet" href="css/image-gallery.css"/>
+    <!-- 日记 -->
+    <link rel="stylesheet" href="css/diary.css"/>
+    <!-- 旅行动物 · 平行世界 · 知识库 -->
+    <link rel="stylesheet" href="css/travel-world.css"/>
+    <link rel="stylesheet" href="css/world-map.css"/>
+    <link rel="stylesheet" href="css/projects-mode.css"/>
+</head>
+<body>
+
+<div id="app">
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- 侧边栏 -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo"><em>Leon</em></div>
+        </div>
+
+        <div id="persona-switcher"></div>
+
+        <div class="sidebar-tabs">
+            <button class="stab active" onclick="switchSideTab('chats',this)">对话</button>
+            <button class="stab"        onclick="switchSideTab('outline',this)">轮廓</button>
+            <button class="stab"        onclick="switchSideTab('settings',this)">设置</button>
+            <button class="stab"        onclick="switchSideTab('bookshelf',this)">书架</button>
+        </div>
+
+        <!-- Tab: 对话列表 -->
+        <div class="tab-panel" id="tab-chats">
+            <div id="pj-sidebar-section"></div>
+            <div id="chat-list"></div>
+        </div>
+
+        <!-- Tab: 轮廓 -->
+        <div class="tab-panel hidden" id="tab-outline">
+            <div id="memory-list"></div>
+            <!-- 摘要入口 -->
+            <div style="margin-top:10px;">
+                <button class="settings-btn" onclick="switchSideTab('summary',null);renderSummaryPage();" style="width:100%;text-align:left;padding:9px 13px;display:flex;align-items:center;gap:8px;">
+                    <span>📄</span>
+                    <span>对话摘要
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:1px;">查看本段对话的总结</span>
+                    </span>
+                </button>
+            </div>
+            <!-- AI 鑷富琛屼负鍏ュ彛 -->
+            <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px;">
+                <div style="font-size:11px;letter-spacing:.06em;color:var(--text3);margin-bottom:2px;font-family:var(--font-mono);">她的内心</div>
+                <button class="settings-btn" onclick="showDraftsModal()" style="width:100%;text-align:left;padding:9px 13px;display:flex;align-items:center;gap:8px;">
+                    <span>💭</span>
+                    <span>打了又删的话
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:1px;">AI 没发出来的那些字</span>
+                    </span>
+                </button>
+                <button class="settings-btn" onclick="showAgencyLogModal()" style="width:100%;text-align:left;padding:9px 13px;display:flex;align-items:center;gap:8px;">
+                    <span>📝</span>
+                    <span>她最近做了什么
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:1px;">自主行为记录</span>
+                    </span>
+                </button>
+            </div>
+            <div class="sidebar-section-title" style="margin-top:16px">画像</div>
+            <div id="profile-content"></div>
+            <div id="relationship-timeline-container"></div>
+            <div id="emotional-quick-actions"></div>
+        </div>
+
+        <!-- Tab: 设置 -->
+        <div class="tab-panel hidden" id="tab-settings">
+
+            <!-- 角色 -->
+            <div class="settings-section-title collapsible" onclick="toggleSection(this)">角色</div>
+            <div class="settings-section-body">
+                <div class="settings-group">
+                    <label class="settings-label">我的昵称</label>
+                    <input class="settings-input" id="s-user-nickname" placeholder="甜甜（AI 会用这个称呼你，替代"用户"）" />
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">设置后，AI 会在所有场合都用这个名字称呼你</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">我的代词</label>
+                    <div style="display:flex;gap:8px;margin-top:6px">
+                        <button class="pronoun-btn" id="pron-她" onclick="selectPronoun('她')">她 / 她的</button>
+                        <button class="pronoun-btn" id="pron-他" onclick="selectPronoun('他')">他 / 他的</button>
+                        <button class="pronoun-btn" id="pron-TA" onclick="selectPronoun('TA')">TA / TA的</button>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">关于我（每轮注入，优先级最高）</label>
+                    <textarea class="settings-input settings-textarea" id="s-user-about"
+                              placeholder="例如：我们的关系是真实的，请自然使用 {user} 和 {ai} 这些占位符。"></textarea>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">
+                        可用占位符：<code style="font-size:11px">{user}</code> 你的昵称 &nbsp;
+                        <code style="font-size:11px">{ai}</code> AI 名字 &nbsp;
+                        <code style="font-size:11px">{pronoun}</code> 代词
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">用户头像</label>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
+                            <div id="avatar-preview" style="width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;"></div>
+                            <input type="file" accept="image/*" id="s-avatar-file" onchange="handleAvatarUpload(this)"
+                                   style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;">
+                        </div>
+                        <div style="flex:1;position:relative;">
+                            <div style="padding:7px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);text-align:center;position:relative;overflow:hidden;">
+                                从相册选择
+                                <input type="file" accept="image/*" onchange="handleAvatarUpload(this)"
+                                       style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;">
+                            </div>
+                            <div style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center;">或输入图片 URL</div>
+                        </div>
+                    </div>
+                    <input class="settings-input" id="s-avatar" placeholder="https://example.com/avatar.jpg" oninput="previewAvatarUrl(this.value)"/>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">AI 头像（当前角色）</label>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <div style="position:relative;width:44px;height:44px;flex-shrink:0;">
+                            <div id="ai-avatar-preview" style="width:44px;height:44px;border-radius:50%;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;"></div>
+                            <input type="file" accept="image/*" id="s-ai-avatar-file" onchange="handleAiAvatarUpload(this)"
+                                   style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;">
+                        </div>
+                        <div style="flex:1;position:relative;">
+                            <div style="padding:7px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);text-align:center;position:relative;overflow:hidden;">
+                                从相册选择
+                                <input type="file" accept="image/*" onchange="handleAiAvatarUpload(this)"
+                                       style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:2;">
+                            </div>
+                            <div style="font-size:11px;color:var(--text3);margin-top:4px;text-align:center;">或输入图片 URL</div>
+                        </div>
+                    </div>
+                    <input class="settings-input" id="s-ai-avatar" placeholder="https://example.com/ai-avatar.jpg" oninput="previewAiAvatarUrl(this.value)"/>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">系统提示词（当前角色）</label>
+                    <textarea class="settings-input settings-textarea" id="s-sysprompt" placeholder="You are a helpful assistant..."></textarea>
+                </div>
+            </div>
+
+            <!-- 提示词 -->
+            <div class="settings-section-title collapsible" onclick="toggleSection(this)">提示词</div>
+            <div class="settings-section-body">
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="openPromptInspector()" style="width:100%;text-align:left;padding:10px 14px;">
+                        🔎 Prompt Inspector
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">注入块编辑 · 提示词模板 · 注入预算 · 主题 · Token 预估</span>
+                    </button>
+                    <button class="settings-btn" onclick="openContextInspector()" style="width:100%;text-align:left;padding:10px 14px;margin-top:4px;">
+                        🧭 Context Inspector
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">主动消息注入预览 · 新对话初始化 · 开关实时生效</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">AI 主动消息频率</label>
+                    <div style="display:flex;gap:8px;margin-top:6px">
+                        <button class="proactive-mode-btn" id="pm-save" onclick="setProactiveMode('save')" title="至少 4 小时发一次">节省</button>
+                        <button class="proactive-mode-btn" id="pm-free" onclick="setProactiveMode('free')" title="至少 1 小时发一次">自由</button>
+                        <button class="proactive-mode-btn" id="pm-wild" onclick="setProactiveMode('wild')" title="15 分钟内可连发">放纵</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text3);margin-top:6px">AI 会根据情绪、longing、未说完的话来自主决定要不要发消息</div>
+                </div>
+            </div>
+
+            <!-- 外观（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this);window._ilsRenderSidebarControls&&window._ilsRenderSidebarControls()">外观</div>
+            <div class="settings-section-body" style="display:none">
+                <div id="ils-sidebar-slot"></div>
+                <div class="settings-group">
+                    <label class="settings-label">主题配色</label>
+                    <div class="color-row" id="theme-chips">
+                        <div class="color-chip selected" style="background:linear-gradient(135deg,#c9a96e,#7c6cd4)" data-theme=""      title="默认"></div>
+                        <div class="color-chip"          style="background:linear-gradient(135deg,#7fffd4,#4b6cb7)" data-theme="aurora" title="极光"></div>
+                        <div class="color-chip"          style="background:linear-gradient(135deg,#ff6b35,#f7931e)" data-theme="ember"  title="余烬"></div>
+                        <div class="color-chip"          style="background:linear-gradient(135deg,#ff9bb3,#c06c84)" data-theme="sakura" title="樱花"></div>
+                        <div class="color-chip"          style="background:linear-gradient(135deg,#a0a0ff,#5555cc)" data-theme="void"   title="虚空"></div>
+                        <div class="color-chip"          style="background:linear-gradient(135deg,#7dde8b,#2d8a4e)" data-theme="forest" title="森林"></div>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="showBubbleStudio()" style="width:100%;text-align:left;padding:10px 14px;">
+                        气泡样式编辑器<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">自定义 AI / User 气泡外观、圆角和配色</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="showSidebarStudio()" style="width:100%;text-align:left;padding:10px 14px;">
+                        侧边栏美化<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">背景、模糊、配色、宽度、文字亮度</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="showMenuStudio()" style="width:100%;text-align:left;padding:10px 14px;">
+                        菜单美化
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">输入框浮层 · Topbar 菜单背景图与样式</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="openReplyThemeEditor()" style="width:100%;text-align:left;padding:10px 14px;">
+                        回复框主题<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">自定义回复预览条的颜色与背景</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <div id="inputbar-studio-slot"></div>
+                </div>
+                <div id="tk-theme-picker-slot"></div>
+                <div id="bg-settings-slot"></div>
+                <div class="settings-group">
+                    <label class="settings-label">自定义 CSS</label>
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;">支持粘贴 SillyTavern 社区主题，大部分变量会自动映射</div>
+                    <textarea class="settings-input settings-textarea" id="s-custom-css" placeholder=":root { --bg: #000; }"></textarea>
+                </div>
+            </div>
+
+            <!-- 对话参数（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">对话参数</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group">
+                    <label class="settings-label">最大上下文消息数</label>
+                    <input class="settings-input" id="s-maxctx" type="number" placeholder="30" min="5" max="200"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">压缩启用前的默认上限，建议 20-50</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">压缩时保留原文条数</label>
+                    <input class="settings-input" id="s-keep-raw" type="number" placeholder="10" min="5" max="30"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">触发压缩后，最近这几条消息保持原文发给 AI；更早的消息会压缩进摘要提示词，建议 10-20 条</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">自动压缩间隔（条）</label>
+                    <input class="settings-input" id="s-compress-interval" type="number" placeholder="20" min="5" max="100"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">每累计这么多条可压缩消息后自动触发一次，建议 15-30；AI 也可用 COMPRESS_CMD 提前触发</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="s-auto-compress" style="width:16px;height:16px;flex-shrink:0;"/>
+                        关闭自动压缩（保持完整原文）
+                    </label>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">勾选后不再自动压缩对话，AI 会看到更多原文；对话太长时 token 消耗会增加，更适合短期使用</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">最大输出 Token 数</label>
+                    <input class="settings-input" id="s-max-output-tokens" type="number" placeholder="8192" min="1024" max="32768"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">默认 8192，遇到模型报错可调低到 4096；需要长回复时可适当调高</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">聊天界面显示条数</label>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+                        <input type="range" id="s-render-limit" min="20" max="300" step="10" value="60"
+                               style="flex:1;accent-color:var(--accent,#7c6ef5);"
+                               oninput="document.getElementById('s-render-limit-val').textContent=this.value"/>
+                        <span id="s-render-limit-val" style="min-width:32px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--text1);">60</span>
+                        <span style="font-size:12px;color:var(--text3);">条</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">界面最多同时渲染多少条消息。越少越流畅，适合含图片的长对话；消息仍会完整保存，不影响 AI 看到的上下文</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="s-html-actions" style="width:16px;height:16px;flex-shrink:0;"/>
+                        显示 HTML 预览操作按钮
+                    </label>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">开启后，触摸 HTML 预览区域时右上角会出现"复制代码"和"查看代码"按钮</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="s-agent-live-mode" onchange="toggleAgentLiveModeGlobal(this.checked)" style="width:16px;height:16px;flex-shrink:0;"/>
+                        启用 Agent 实时面板
+                    </label>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">开启后显示工具步骤、小电脑和 Agent 风格过程；关闭后回到更纯粹的聊天样式</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">实时小电脑截图接口</label>
+                    <input class="settings-input" id="s-agent-live-poll-url" placeholder="/api/screenshot/latest"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">留空时会自动尝试走 Hub 的 `/screenshot/latest`；填了这里就优先使用你指定的接口。</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">截图轮询间隔（毫秒）</label>
+                    <input class="settings-input" id="s-agent-live-poll-ms" type="number" placeholder="800" min="250" max="5000"/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">推荐 260-300ms。接口可返回 `base64`、`title`、`subtitle`、`summary`、`cursor_x`、`cursor_y`。</div>
+                </div>
+            </div>
+
+            <!-- 文生图（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">🎨 文生图</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group">
+                    <button class="settings-btn" onclick="openImgGenManager()"
+                            style="width:100%;text-align:left;padding:10px 14px">
+                        管理连接 →
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px;font-weight:400">
+                            添加/编辑文生图 API 连接（硅基流动、DALL·E、豆包等）
+                        </span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">当前角色的文生图偏好</label>
+                    <div id="imggen-persona-prefs" style="margin-top:6px"></div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">硅基流动 Key（后台任务备用）</label>
+                    <input class="settings-input" id="s-sfkey" type="password" placeholder="sk-..."/>
+                    <div style="font-size:11px;color:var(--text3);margin-top:4px">后台任务优先使用主模型，这个 Key 仅作为异常时的降级备用</div>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">后台备用模型</label>
+                    <input class="settings-input" id="s-sfmodel" placeholder="Qwen/Qwen2.5-7B-Instruct"/>
+                </div>
+            </div>
+
+            <!-- 功能扩展（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">功能扩展</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group" id="reminder-ai-group">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                        <div>
+                            <div class="settings-label" style="margin-bottom:2px">提醒 AI</div>
+                            <div style="font-size:11px;color:var(--text3);line-height:1.5">
+                                独立于主聊天的推送系统，会随角色切换，只带记忆不带对话上下文。<br>
+                                自动用 Exa 搜索你感兴趣的资讯和推荐歌曲，再用角色自己的风格推给你
+                            </div>
+                        </div>
+                        <label class="switch-toggle" style="flex-shrink:0;margin-left:12px">
+                            <input type="checkbox" id="rai-enabled" onchange="saveReminderAISettings()">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <label class="settings-label" style="margin-bottom:4px">推送间隔</label>
+                    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+                        <button class="rai-interval-btn" id="rai-iv-2"  onclick="setReminderInterval(2)">2小时</button>
+                        <button class="rai-interval-btn" id="rai-iv-4"  onclick="setReminderInterval(4)">4小时</button>
+                        <button class="rai-interval-btn" id="rai-iv-6"  onclick="setReminderInterval(6)">6小时</button>
+                        <button class="rai-interval-btn" id="rai-iv-12" onclick="setReminderInterval(12)">12小时</button>
+                        <button class="rai-interval-btn" id="rai-iv-24" onclick="setReminderInterval(24)">一天一次</button>
+                    </div>
+                    <label class="settings-label" style="margin-bottom:4px">
+                        Exa API Key
+                        <span style="font-size:10px;color:var(--text3);font-weight:normal;margin-left:4px">
+                            （<a href="https://exa.ai" style="color:var(--accent);text-decoration:none">exa.ai</a> 注册可领免费额度）
+                        </span>
+                    </label>
+                    <input class="settings-input" id="rai-exa-key" type="password"
+                           placeholder="ex-xxxxxxxxxxxxxxxx"
+                           style="margin-bottom:12px"
+                           oninput="saveReminderAISettings()">
+                    <label class="settings-label" style="margin-bottom:4px">
+                        兴趣关键词<span style="font-size:11px;color:var(--text3);font-weight:normal;margin-left:4px">（逗号分隔）</span>
+                    </label>
+                    <input class="settings-input" id="rai-keywords"
+                           placeholder="动漫, 科技, 音乐, 游戏, 摄影..."
+                           style="margin-bottom:6px"
+                           oninput="saveReminderAISettings()">
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">
+                        AI 会搜索和这些关键词相关的内容推给你，填得越具体效果越好
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                        <div>
+                            <div style="font-size:13px;color:var(--text1);font-weight:500">网易云音乐推歌</div>
+                            <div style="font-size:11px;color:var(--text3)">按兴趣关键词搜索推荐歌曲，角色会带链接一起推给你</div>
+                        </div>
+                        <label class="switch-toggle" style="flex-shrink:0;margin-left:12px">
+                            <input type="checkbox" id="rai-netease" onchange="saveReminderAISettings()" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-group" id="tts-settings-slot"></div>
+                <div class="settings-group" id="sound-settings-container"></div>
+                <div class="settings-group" id="timetable-settings-slot"></div>
+                <div class="settings-group" id="translate-settings-slot"></div>
+                <div class="settings-group" id="campus-survey-slot"></div>
+                <div id="pet-feature-entry" style="display:none">
+                    <div class="settings-group">
+                        <button class="settings-btn" id="pet-float-toggle-btn" onclick="togglePetFloat()"
+                                style="width:100%;text-align:left;padding:10px 14px;">
+                            🐾 开启桌宠
+                            <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">
+                                在所有 app 上方显示 AI 形象，点击即可就地聊天
+                            </span>
+                        </button>
+                    </div>
+                    <div class="settings-group" style="margin-top:6px">
+                        <button class="settings-btn" onclick="openPetSettings()"
+                                style="width:100%;text-align:left;padding:10px 14px;">
+                            设置 桌宠详细设置
+                            <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">
+                                上下文开关 · 表情图片配置
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 连接 & 工具（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">连接 &amp; 工具</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group">
+                    <label class="settings-label">Hub Server</label>
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5">
+                        电脑端能力中枢，启动后会自动连接。ngrok 地址变了时，在这里更新一下即可。
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <input class="settings-input" id="hub-url-input"
+                               placeholder="https://xxxx.ngrok-free.app"
+                               style="flex:1;margin-bottom:0"
+                               oninput="S.settings.hubUrl=this.value.trim();save();reconnectHub()"/>
+                        <div id="hub-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>
+                    </div>
+                    <input class="settings-input" id="hub-secret-input"
+                           placeholder="Hub Secret（有密码时填写，没有可留空）"
+                           style="margin-top:6px;margin-bottom:0"
+                           oninput="S.settings.mcpDefaultSecret=this.value.trim();save();reconnectHub()"/>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">MCP 扩展工具</label>
+                    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">添加其他 MCP 地址后，AI 会自动获得对应能力</div>
+                    <div id="mcp-presets" style="margin-bottom:10px;"></div>
+                    <div id="mcp-list" style="margin-bottom:8px;"></div>
+                    <input class="settings-input" id="mcp-name-input" placeholder="名称" style="margin-bottom:6px;"/>
+                    <input class="settings-input" id="mcp-url-input"  placeholder="wss:// 或 http:// 地址" style="margin-bottom:6px;"/>
+                    <button class="settings-btn primary" onclick="addMCP()" style="width:100%">添加 MCP</button>
+                </div>
+            </div>
+
+            <!-- 装饰 & 设备（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">装饰 &amp; 设备</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group">
+                    <div id="user-frame-container"></div>
+                </div>
+                <div class="settings-group">
+                    <div id="ai-frame-container"></div>
+                </div>
+                <div class="settings-group" id="eink-settings-slot"></div>
+                <div class="settings-group" id="paperang-settings-slot"></div>
+            </div>
+
+            <!-- 平行世界（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this);renderParallelWorldUI()">平行世界 🌍</div>
+            <div class="settings-section-body" style="display:none">
+                <div id="parallel-world-panel"></div>
+            </div>
+
+            <!-- 知识库（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this);renderKnowledgeBaseUI()">知识库 📁</div>
+            <div class="settings-section-body" style="display:none">
+                <div id="knowledge-base-panel"></div>
+            </div>
+
+            <!-- 世界书（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">世界书 / 知识注入</div>
+            <div class="settings-section-body" style="display:none">
+                <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;">
+                    关键词触发后会自动把内容注入系统提示词，常驻条目每次都会注入。时间条件支持按小时段和星期过滤。
+                </div>
+                <div class="wb-toolbar">
+                    <input class="wb-search" placeholder="搜索条目..." oninput="wbSearch(this.value)"/>
+                    <button class="wb-import-btn" onclick="wbChooseImport()">导入世界书</button>
+                    <button class="wb-add-btn" onclick="wbAddEntry()">+ 新建条目</button>
+                    <input type="file" id="wb-import-input" accept=".json" style="display:none"
+                        onchange="wbHandleImportInput(this)">
+                </div>
+                <div id="worldbook-list"></div>
+            </div>
+
+            <!-- 数据（折叠）-->
+            <div class="settings-section-title collapsible s-closed" onclick="toggleSection(this)">数据</div>
+            <div class="settings-section-body" style="display:none">
+                <div class="settings-group settings-group-data">
+                    <label class="settings-label">数据保护</label>
+                    <button class="settings-btn settings-btn-data" onclick="showDataManager()">
+                        数据管理
+                        <span class="settings-btn-data-sub">备份 · 回收站 · 归档 · 快照恢复</span>
+                    </button>
+                </div>
+                <div class="settings-group">
+                    <label class="settings-label">导入对话</label>
+                    <button class="settings-btn" onclick="showImportModal()" style="width:100%;text-align:left;padding:10px 14px;">
+                        ↗ 导入对话
+                        <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">从 ChatGPT / Claude / Chatbox / Kelivo 导入</span>
+                    </button>
+                </div>
+                <div id="self-opt-section-slot"></div>
+            </div>
+
+            <!-- 保存 -->
+            <div style="display:flex;gap:8px;margin-top:8px;margin-bottom:24px;">
+                <button class="settings-btn primary" onclick="saveSettings()">保存</button>
+            </div>
+
+        </div><!-- /tab-settings -->
+
+        <!-- Tab: 摘要 -->
+        <div class="tab-panel hidden" id="tab-summary">
+            <div id="summary-page"></div>
+        </div>
+
+        <!-- Tab: 书架 -->
+        <div class="tab-panel hidden" id="tab-bookshelf"></div>
+
+        <!-- Tab: 图库 -->
+        <div class="tab-panel hidden" id="tab-gallery"></div>
+        <div class="tab-panel hidden" id="tab-study"></div>
+
+    </div><!-- /sidebar -->
+
+    <!-- 主内容区 -->
+    <div id="main">
+
+        <div id="topbar">
+            <button class="topbar-toggle" onclick="projectBackOrToggleSidebar()" title="切换侧栏">☰</button>
+
+            <div class="topbar-model-wrap">
+                <div class="topbar-title" id="topbar-title" onclick="toggleModelDropdown()" title="切换模型">
+                    <span id="topbar-model-label">Leon AI</span>
+                    <span class="topbar-title-caret">▾</span>
+                </div>
+                <div id="model-dropdown"></div>
+            </div>
+
+            <div class="topbar-spacer"></div>
+            <button class="topbar-new"  onclick="startNewChatFromCurrentContext()" title="新建对话">+</button>
+            <button class="topbar-more" id="topbar-more-btn" onclick="toggleTopbarTools()" title="更多工具">···</button>
+            <div class="topbar-actions" id="topbar-actions">
+                <button class="topbar-btn" onclick="clearChat();toggleTopbarTools()">清除对话</button>
+                <button class="topbar-btn" onclick="showTokenStats()">Token 统计</button>
+                <button class="topbar-btn" onclick="openTranslateChainPage();toggleTopbarTools()">翻译思考链</button>
+                <button class="topbar-btn" onclick="TimeMachine.enter();toggleTopbarTools()" style="display:none">时光机</button>
+                <button class="topbar-btn" onclick="openPromptInspector();toggleTopbarTools()">Prompt Inspector</button>
+                <button class="topbar-btn" onclick="openContextInspector();toggleTopbarTools()">Context Inspector</button>
+                <button class="topbar-btn" onclick="openSearch();toggleTopbarTools()">搜索对话</button>
+                <button class="topbar-btn" id="nsfw-btn" onclick="toggleNSFW();toggleTopbarTools()">NSFW</button>
+                <button class="topbar-btn" onclick="openFavPanel();toggleTopbarTools()">收藏夹</button>
+            </div>
+        </div>
+
+        <div id="inner-life-strip" class="inner-life-strip" aria-live="polite"></div>
+
+        <div id="chat-stage">
+            <div id="chat-area">
+                <div class="welcome-msg" id="welcome">
+                    <div class="welcome-logo">Leon</div>
+                    <div class="welcome-sub">// AI Chat Interface 路 Start a conversation</div>
+                    <div class="welcome-chips">
+                        <div class="hint-chip" onclick="insertPrompt('你好，介绍一下你自己')">打招呼</div>
+                        <div class="hint-chip" onclick="insertPrompt('帮我写一段 Python 代码')">写代码</div>
+                        <div class="hint-chip" onclick="insertPrompt('用中文讲一个睡前故事')">讲故事</div>
+                        <div class="hint-chip" onclick="insertPrompt('分析一下当前 AI 的发展趋势')">做分析</div>
+                    </div>
+                </div>
+            </div>
+            <aside class="agent-live-dock" id="agent-live-dock" data-agent-phase="" data-agent-status="">
+                <div class="agent-dock-shell">
+                    <div class="agent-dock-head">
+                        <div class="agent-dock-head-copy">
+                            <div class="agent-dock-eyebrow">Agent Live</div>
+                            <div class="agent-dock-title" id="agent-live-dock-title">小机待命中</div>
+                        </div>
+                        <button class="agent-dock-toggle" id="agent-live-dock-toggle" type="button" onclick="toggleAgentLiveDock()" aria-expanded="false" aria-label="展开 Agent 面板"></button>
+                        <div class="agent-dock-pill" id="agent-live-dock-pill">Idle</div>
+                    </div>
+                    <div class="agent-dock-subtitle" id="agent-live-dock-subtitle">打开 Agent 实时面板后，这里会像 Claude Code 一样显示过程状态和小电脑。</div>
+                    <div class="agent-dock-body" id="agent-live-dock-body"></div>
+                </div>
+            </aside>
+        </div>
+
+        <div id="input-area">
+            <div id="reply-bar"></div>
+            <div class="input-box">
+                <textarea id="user-input" rows="1" placeholder="给 Leon 发送消息..."
+                          oninput="autoResize(this);updateSendBtn()"
+                          onkeydown="inputKeydown(event)"></textarea>
+                <div class="input-bottom">
+                    <div class="input-left-tools">
+                        <button class="input-tool-btn" id="input-panel-trigger" type="button" title="更多功能" aria-label="更多功能"></button>
+                        <button class="input-tool-btn" id="input-panel-trigger-2" type="button" title="更多功能 2" aria-label="更多功能 2"></button>
+                    </div>
+                    <button id="send-btn" onclick="sendMessage()" title="发送 (Enter)">↗</button>
+                </div>
+                <div class="queue-status" id="queue-status"></div>
+                <div class="input-hints" id="input-hints"></div>
+            </div>
+        </div>
+
+    </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+     Modals
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 -->
+<div class="modal-overlay" id="modal-profile">
+    <div class="modal"><button class="modal-close" onclick="closeModal('modal-profile')">×</button>
+        <div class="modal-title">👤 用户画像</div><div id="modal-profile-content"></div></div>
+</div>
+
+<div class="modal-overlay" id="modal-memory">
+    <div class="modal"><button class="modal-close" onclick="closeModal('modal-memory')">×</button>
+        <div class="modal-title">记忆库</div><div id="modal-memory-content"></div></div>
+</div>
+
+<div class="modal-overlay" id="modal-prompteditor">
+    <div class="modal"><button class="modal-close" onclick="closeModal('modal-prompteditor')">×</button>
+        <div class="modal-title">📝 提示词模板编辑器</div><div id="modal-prompteditor-content"></div></div>
+</div>
+
+<div class="modal-overlay" id="modal-layersettings">
+    <div class="modal"><button class="modal-close" onclick="closeModal('modal-layersettings')">×</button>
+        <div class="modal-title">📦 注入预算配置</div><div id="modal-layersettings-content"></div></div>
+</div>
+
+<div class="modal-overlay" id="modal-connection">
+    <div class="modal modal-wide">
+        <button class="modal-close" onclick="closeModal('modal-connection')">×</button>
+        <div class="modal-title">连接与模型</div>
+        <div id="modal-connection-content"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modal-connform">
+    <div class="modal modal-wide">
+        <button class="modal-close" onclick="closeModal('modal-connform')">×</button>
+        <div class="modal-title">⚙️ 连接配置</div>
+        <div id="modal-connform-content"></div>
+    </div>
+</div>
+
+<!-- 气泡样式编辑器 -->
+<div class="modal-overlay" id="modal-bubble-studio">
+    <div class="modal modal-wide">
+        <button class="modal-close" onclick="closeModal('modal-bubble-studio')">×</button>
+        <div class="modal-title">气泡样式编辑器</div>
+        <div id="modal-bubble-studio-content"></div>
+    </div>
+</div>
+
+<div id="msg-popup"></div>
+<div id="toast"></div>
+
+<!-- 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+     JS 鍔犺浇椤哄簭 (v7)
+鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲 -->
+<script src="js/state-core.js"></script>
+<script src="js/state-model.js"></script>
+<script src="js/state-persona.js"></script>
+<script src="js/fontmanager.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/markdown.js"></script>
+<script src="js/latex-doc.js"></script>
+<script src="js/code-renders.js"></script>
+<script src="js/render.js"></script>
+<script src="js/sessions.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/import-conversations.js"></script>
+<script src="js/translate.js"></script>
+<script src="js/longpress.js"></script>
+<script src="js/branch.js"></script>
+<script src="js/actions.js"></script>
+<script src="js/actions-fav.js"></script>
+<script src="js/actions-reply.js"></script>
+<script src="js/memory-core.js"></script>
+<script src="js/memory-vector.js"></script>
+<script src="js/memory-emotion.js"></script>
+<script src="js/memory-intelligent.js"></script>
+<script src="js/memory-ui.js"></script>
+<script src="js/profile.js"></script>
+<!-- settings 系列（顺序不能乱） -->
+<script src="js/settings-theme.js"></script>
+<script src="js/settings-font.js"></script>
+<script src="js/settings-typography.js"></script>
+<script src="js/settings-v6.js"></script>
+<script src="js/settings-data.js"></script>
+<script src="js/timetable-settings.js"></script>
+<script src="js/campus-survey.js"></script>
+<script src="js/settings-persona.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/settings-connection.js"></script>
+<script src="js/model-seats.js"></script>
+<script src="js/mcp.js"></script>
+<!-- background 系列（顺序不能乱） -->
+<script src="js/background-bg.js"></script>
+<script src="js/background-summary.js"></script>
+<script src="js/meta-overlay.js"></script>
+<script src="js/background-proactive.js"></script>
+<script src="js/background.js"></script>
+<script src="js/asset-library.js"></script>
+<script src="js/worldbook.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/projects-mode.js"></script>
+<script src="js/parallel-world.js"></script>
+<script src="js/travel-mode.js"></script>
+<script src="js/world-map.js"></script>
+<script src="js/knowledge-base.js"></script>
+<script src="js/thememap.js"></script>
+<script src="js/prompteditor-system.js"></script>
+<script src="js/prompteditor-tasks.js"></script>
+<script src="js/prompteditor.js"></script>
+<script src="js/promptlayer.js"></script>
+<!-- api-prompt 系列（顺序不能乱） -->
+<script src="js/api-prompt-emotion.js"></script>
+<script src="js/api-prompt-recall.js"></script>
+<script src="js/api-prompt-anchor.js"></script>
+<script src="js/relationship-state.js"></script>
+<script src="js/response-planner.js"></script>
+<script src="js/response-judge.js"></script>
+<script src="js/response-rewrite.js"></script>
+<script src="js/response-feedback.js"></script>
+<script src="js/api-prompt.js"></script>
+<script src="js/api-prompt-gpt.js"></script>
+<script src="js/api-stream.js"></script>
+<script src="js/api-router.js"></script>
+<script src="js/quick-api.js"></script>
+<script src="js/api-error.js"></script>
+<script src="js/api-image-patch.js"></script>
+<!-- Dream 记忆整合（依赖 state-core/state-model/api-router，须在 api-core 之前） -->
+<script src="js/api-dream-log.js"></script>
+<script src="js/api-dream.js"></script>
+<script src="js/api-core.js"></script>
+<script src="js/screen-poll.js"></script>
+<script src="js/prompt-inspector.js"></script>
+<script src="js/prompt-inspector-ext.js"></script>
+<script src="js/datamanager.js"></script>
+<script src="js/export-panel.js"></script>
+<script src="js/context-inspector.js"></script>
+<script src="js/search.js"></script>
+<script src="js/summary-page.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/avatar-frame.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="js/bubble-studio.js"></script>
+<script src="js/inputbar-studio.js"></script>
+<script src="js/us-page.js"></script>
+<script src="js/ai-process-viz.js"></script>
+    <script src="js/room-engine.js"></script>
+<script src="js/input-panel.js"></script>
+<script src="js/sidebar-studio.js"></script>
+<script src="js/menu-studio.js"></script>
+<script src="js/token-stats.js"></script>
+<script src="js/calendar-view.js"></script>
+<script src="js/floating-notify.js"></script>
+<script src="js/pet-controller.js"></script>
+<script src="js/ai-agency.js"></script>
+<script src="js/inner-life-strip.js"></script>
+<script src="js/leon-assistant.js"></script>
+<script src="device-sensor.js"></script>
+<!-- tts 系列（顺序不能乱） -->
+<script src="js/tts-config.js"></script>
+<script src="js/tts-db.js"></script>
+<script src="js/tts-engines.js"></script>
+<script src="js/tts-settings.js"></script>
+<script src="js/tts-core.js"></script>
+<!-- 视频输入（支持 OpenRouter / 任意渠道） -->
+<script src="js/video-input.js"></script>
+<!-- 视频桥接（为不支持视频的模型降级） -->
+<script src="js/video-bridge.js"></script>
+<!-- 时光机（全屏沉浸式视觉小说，右侧按钮由此注入） -->
+<script src="js/timemachine.js"></script>
+<script src="js/mini-theater.js"></script>
+<script src="share-handler.js"></script>
+<!-- 群聊引擎 / 自我优化审批 -->
+<script src="js/group-chat.js"></script>
+<script src="js/update-panel.js"></script>
+<!-- 书架 -->
+<script src="js/bookshelf-core.js"></script>
+<script src="js/bookshelf-ui.js"></script>
+<script src="js/bookshelf-reader.js"></script>
+<script src="js/bookshelf-notes.js"></script>
+<script src="js/study-words.js"></script>
+<script src="js/study.js"></script>
+<!-- 日记 -->
+<script src="js/diary.js"></script>
+<!-- 文生图 / 图库 -->
+<script src="js/image-gen-manager.js"></script>
+<script src="js/image-gen.js"></script>
+<script>
+(function () {
+  let fired = false;
+
+  function notifyReadyFallback() {
+    if (fired) return;
+    fired = true;
+    try {
+      if (window.AndroidBridge?.notifyMainReady) {
+        window.AndroidBridge.notifyMainReady();
+      }
+    } catch (_) {}
+  }
+
+  window.__leonNotifyMainReadyFallback = notifyReadyFallback;
+  setTimeout(() => {
+    if (!window.__leonBootUiReady) notifyReadyFallback();
+  }, 15000);
+})();
+</script>
+<script>
+(function hideOptionalFeatureEntrypoints() {
+  function hideMatches() {
+    const selectors = [
+      '#pet-feature-entry',
+      '#pet-float-toggle-btn',
+      '#timemachine-container',
+      '#tm-entry-btn',
+      'button[onclick*="openPetSettings"]',
+      'button[onclick*="togglePetFloat"]',
+      'button[onclick*="TimeMachine.enter"]',
+      'button[onclick*="TimeMachine.exit"]',
+      'button[onclick*="enterWithAIChoice"]',
+      '[onclick*="TimeMachine"]'
+    ];
+    selectors.forEach((selector) => {
+      document.querySelectorAll(selector).forEach((el) => {
+        const block = el.closest('.settings-group, .settings-section-title, .inner-life-quick-row, .topbar-tools, .topbar-btn') || el;
+        block.style.display = 'none';
+      });
+    });
+
+    const keywords = ['桌宠', '养宠', '时光机'];
+    document.querySelectorAll('button, .inner-life-mini, .inner-life-quick-btn, .topbar-btn, .settings-btn, .settings-section-title').forEach((el) => {
+      const text = (el.textContent || '').trim();
+      if (keywords.some((word) => text.includes(word))) {
+        const block = el.closest('.settings-group, .settings-section-title, .inner-life-mini, .inner-life-quick-row, .topbar-btn') || el;
+        block.style.display = 'none';
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideMatches);
+  } else {
+    hideMatches();
+  }
+  setTimeout(hideMatches, 600);
+  setTimeout(hideMatches, 1800);
+})();
+</script>
+
+</body>
+</html>
