@@ -298,10 +298,168 @@
     c.fillStyle='#a07838'; c.fillRect(Math.round(cx-12),Math.round(cy-bh*0.18),24,5);
   }
 
+  /* ─── DETAIL DRAWERS (top face overlays after isoBox) ─── */
+  function topCenter(col, row, item) {
+    var a=gp(col,row),b=gp(col+item.w,row),d=gp(col,row+item.h),e=gp(col+item.w,row+item.h);
+    return {x:(a.x+b.x+d.x+e.x)/4, y:(a.y+b.y+d.y+e.y)/4};
+  }
+
+  function drawBed(c, col, row, item) {
+    var bh=HH['bed'], cols=ic('bed');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // pillow area on top face (near "head" = low row)
+    var head=gp(col,row), hr=gp(col+item.w,row), hl=gp(col,row+0.5), hr2=gp(col+item.w,row+0.5);
+    poly(c,[head,hr,hr2,hl],'#fff8f0');
+    // two pillows
+    var p1a=gp(col+0.15,row+0.05),p1b=gp(col+0.85,row+0.05),p1c=gp(col+0.85,row+0.45),p1d=gp(col+0.15,row+0.45);
+    poly(c,[p1a,p1b,p1c,p1d],'#e8ddd0');
+    var p2a=gp(col+1.15,row+0.05),p2b=gp(col+1.85,row+0.05),p2c=gp(col+1.85,row+0.45),p2d=gp(col+1.15,row+0.45);
+    poly(c,[p2a,p2b,p2c,p2d],'#e8ddd0');
+    // blanket
+    poly(c,[hl,hr2,gp(col+item.w,row+item.h),gp(col,row+item.h)],'#7898d0');
+    poly(c,[hl,hr2,gp(col+item.w,row+0.6),gp(col,row+0.6)],'#5878b8');
+  }
+
+  function drawSofa(c, col, row, item) {
+    var bh=HH['sofa'], cols=ic('sofa');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // backrest strip along top edge
+    poly(c,[gp(col,row),gp(col+item.w,row),gp(col+item.w,row+0.4),gp(col,row+0.4)],'#b83838');
+    // seat cushions — 3 divisions
+    for(var i=0;i<3;i++){
+      var x0=col+i*(item.w/3), x1=col+(i+1)*(item.w/3);
+      poly(c,[gp(x0+0.05,row+0.42),gp(x1-0.05,row+0.42),gp(x1-0.05,row+item.h-0.05),gp(x0+0.05,row+item.h-0.05)],'rgba(255,255,255,0.12)');
+    }
+    // armrests sides
+    poly(c,[gp(col,row),gp(col+0.3,row),gp(col+0.3,row+item.h),gp(col,row+item.h)],'#a02828');
+    poly(c,[gp(col+item.w-0.3,row),gp(col+item.w,row),gp(col+item.w,row+item.h),gp(col+item.w-0.3,row+item.h)],'#a02828');
+  }
+
+  function drawChair(c, col, row, item) {
+    var bh=HH['chair'], cols=ic('chair');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // backrest
+    poly(c,[gp(col,row),gp(col+1,row),gp(col+1,row+0.35),gp(col,row+0.35)],'#8050b8');
+    // seat
+    poly(c,[gp(col,row+0.38),gp(col+1,row+0.38),gp(col+1,row+1),gp(col,row+1)],'#9868c8');
+  }
+
+  function drawDresser(c, col, row, item) {
+    var bh=HH['dresser'], cols=ic('dresser');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // mirror on top half
+    poly(c,[gp(col+0.1,row),gp(col+item.w-0.1,row),gp(col+item.w-0.1,row+0.55),gp(col+0.1,row+0.55)],'#a8d8f0');
+    poly(c,[gp(col+0.2,row+0.05),gp(col+item.w-0.2,row+0.05),gp(col+item.w-0.2,row+0.3),gp(col+0.2,row+0.3)],'#c8eeff');
+    // drawer handles on right face
+    var e2=gp(col+item.w,row+item.h), b2=gp(col+item.w,row);
+    c.fillStyle='#d4b070'; c.fillRect(Math.round((e2.x+b2.x)/2-5),Math.round(e2.y+bh*0.3),10,3);
+    c.fillRect(Math.round((e2.x+b2.x)/2-5),Math.round(e2.y+bh*0.6),10,3);
+  }
+
+  function drawDesk(c, col, row, item) {
+    var bh=HH['desk'], cols=ic('desk');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // laptop/monitor on top
+    var ct=topCenter(col,row,item);
+    poly(c,[gp(col+0.1,row+0.1),gp(col+1.2,row+0.1),gp(col+1.2,row+0.9),gp(col+0.1,row+0.9)],'#1a2a50');
+    poly(c,[gp(col+0.15,row+0.15),gp(col+1.15,row+0.15),gp(col+1.15,row+0.85),gp(col+0.15,row+0.85)],'#2858d0');
+    // cup & papers
+    c.fillStyle='#d89050'; c.beginPath(); c.ellipse(Math.round(gp(col+1.6,row+0.4).x),Math.round(gp(col+1.6,row+0.4).y),5,3,0,0,Math.PI*2); c.fill();
+  }
+
+  function drawTable(c, col, row, item) {
+    var bh=HH['table'], cols=ic('table');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // round tabletop indicator
+    var ct=topCenter(col,row,item);
+    c.fillStyle='rgba(255,255,255,0.18)'; c.beginPath();
+    c.ellipse(Math.round(ct.x),Math.round(ct.y),Math.round(TW*0.38),Math.round(TH*0.38),0,0,Math.PI*2); c.fill();
+  }
+
+  function drawStove(c, col, row, item) {
+    var bh=HH['stove'], cols=ic('stove');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // 4 burners on top face
+    [[0.35,0.3],[0.75,0.3],[0.35,0.75],[0.75,0.75]].forEach(function(b){
+      var bp=gp(col+b[0]*item.w, row+b[1]*item.h);
+      c.fillStyle='#404040'; c.beginPath(); c.ellipse(Math.round(bp.x),Math.round(bp.y),7,4,0,0,Math.PI*2); c.fill();
+      c.fillStyle='#606060'; c.beginPath(); c.ellipse(Math.round(bp.x),Math.round(bp.y),4,2,0,0,Math.PI*2); c.fill();
+    });
+  }
+
+  function drawFridge(c, col, row, item) {
+    var bh=HH['fridge'], cols=ic('fridge');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // handle on right face
+    var e2=gp(col+item.w,row+item.h), b2=gp(col+item.w,row);
+    c.fillStyle='#a0b0c0'; c.fillRect(Math.round(b2.x-3),Math.round(b2.y+bh*0.15),3,Math.round(bh*0.25));
+    c.fillRect(Math.round(b2.x-3),Math.round(b2.y+bh*0.55),3,Math.round(bh*0.2));
+    // divider line
+    c.strokeStyle='rgba(0,0,0,0.2)'; c.lineWidth=1;
+    c.beginPath(); c.moveTo(Math.round(e2.x),Math.round(e2.y+bh*0.38)); c.lineTo(Math.round(b2.x),Math.round(b2.y+bh*0.38)); c.stroke();
+    // green led
+    c.fillStyle='#40e860'; c.beginPath(); c.ellipse(Math.round(b2.x-5),Math.round(b2.y+bh*0.08),3,2,0,0,Math.PI*2); c.fill();
+  }
+
+  function drawPiano(c, col, row, item) {
+    var bh=HH['piano'], cols=ic('piano');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // keyboard on top face
+    poly(c,[gp(col+0.1,row+0.45),gp(col+item.w-0.1,row+0.45),gp(col+item.w-0.1,row+item.h-0.1),gp(col+0.1,row+item.h-0.1)],'#f0f0e8');
+    // black keys
+    for(var k=0;k<5;k++){
+      var kx=col+0.2+k*((item.w-0.4)/5.5);
+      poly(c,[gp(kx,row+0.45),gp(kx+0.18,row+0.45),gp(kx+0.18,row+0.78),gp(kx,row+0.78)],'#111');
+    }
+  }
+
+  function drawBathtub(c, col, row, item) {
+    var bh=HH['bathtub'], cols=ic('bathtub');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // water inside
+    poly(c,[gp(col+0.15,row+0.15),gp(col+item.w-0.15,row+0.15),gp(col+item.w-0.15,row+item.h-0.15),gp(col+0.15,row+item.h-0.15)],'#80c8e8');
+    poly(c,[gp(col+0.15,row+0.15),gp(col+item.w-0.15,row+0.15),gp(col+item.w-0.15,row+0.35),gp(col+0.15,row+0.35)],'#a8ddf4');
+    // tap
+    c.fillStyle='#b8b8b0'; c.fillRect(Math.round(gp(col+item.w-0.2,row+0.1).x)-2,Math.round(gp(col+item.w-0.2,row+0.1).y)-8,4,8);
+  }
+
+  function drawSink(c, col, row, item) {
+    var bh=HH['sink'], cols=ic('sink');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // basin on top
+    poly(c,[gp(col+0.1,row+0.2),gp(col+0.9,row+0.2),gp(col+0.9,row+0.9),gp(col+0.1,row+0.9)],'#b0b8c0');
+    poly(c,[gp(col+0.15,row+0.25),gp(col+0.85,row+0.25),gp(col+0.85,row+0.45),gp(col+0.15,row+0.45)],'rgba(160,200,255,0.4)');
+    // tap
+    c.fillStyle='#c0c0b8'; c.fillRect(Math.round(gp(col+0.5,row+0.15).x)-2,Math.round(gp(col+0.5,row+0.15).y)-10,4,10);
+  }
+
+  function drawClock(c, col, row, item) {
+    var bh=HH['clock'], cols=ic('clock');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    var ct=topCenter(col,row,item);
+    c.fillStyle='#f0ece0'; c.beginPath(); c.ellipse(Math.round(ct.x),Math.round(ct.y),8,5,0,0,Math.PI*2); c.fill();
+    c.fillStyle='#333'; c.fillRect(Math.round(ct.x)-1,Math.round(ct.y)-4,1,4);
+    c.fillRect(Math.round(ct.x),Math.round(ct.y)-1,3,1);
+  }
+
+  function drawVase(c, col, row, item) {
+    var bh=HH['vase'], cols=ic('vase');
+    isoBox(c,col,row,item.w,item.h,bh,cols[0],cols[1],cols[2]);
+    // flowers on top
+    var ct=topCenter(col,row,item);
+    [[-6,-3],[0,-5],[6,-3]].forEach(function(o,i){
+      c.fillStyle=['#f06080','#ffe030','#f040c0'][i];
+      c.beginPath(); c.ellipse(Math.round(ct.x+o[0]),Math.round(ct.y+o[1]),5,3,0,0,Math.PI*2); c.fill();
+    });
+  }
+
   var SPECIAL = {
     plant:drawPlant, rug:drawRug, pond:drawPond, bookcase:drawBookcase,
     shelf:drawBookcase, tv:drawTV, window:drawWindow, fountain:drawFountain,
     cat:drawCat, lamp:drawLamp, flowerbed:drawFlowerBed, bigtree:drawBigTree, swing:drawSwing,
+    bed:drawBed, sofa:drawSofa, chair:drawChair, dresser:drawDresser, desk:drawDesk,
+    table:drawTable, diningtbl:drawTable, stove:drawStove, fridge:drawFridge,
+    piano:drawPiano, bathtub:drawBathtub, sink:drawSink, clock:drawClock, vase:drawVase,
   };
 
   function drawItemOnCanvas(c, p) {
