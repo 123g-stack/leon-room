@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>我的小屋</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#120c1a;}
+</style>
+</head>
+<body>
+<script src="room-engine.js"></script>
+<script>
+  window.addEventListener('load', function(){
+    window.openLeonRoom();
+    // 独立页面隐藏返回按钮
+    var back = document.getElementById('lrm-back');
+    if(back) back.style.display = 'none';
+  });
+</script>
+</body>
+</html>
