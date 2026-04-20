@@ -779,7 +779,7 @@
           '<button id="lrm-m-add" style="flex:2;height:36px;border:none;border-radius:10px;background:#ff88aa;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">加入小屋</button>'+
         '</div>'+
       '</div>';
-    el.style.position='relative'; el.appendChild(modal);
+    el.appendChild(modal);
 
     bot.appendChild(floorRow); bot.appendChild(pal);
     el.appendChild(hdr); el.appendChild(tabs); el.appendChild(wrap); el.appendChild(bot);
