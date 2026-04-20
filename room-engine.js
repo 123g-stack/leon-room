@@ -621,10 +621,10 @@
     DPR=Math.min(window.devicePixelRatio||1,3);
     var wrap=document.getElementById(ROOM_ID).querySelector('#lrm-wrap');
     var wrapW=wrap.clientWidth||window.innerWidth;
-    var wrapH=wrap.clientHeight||window.innerHeight;
+    var wrapH=wrap.clientHeight; if(wrapH<100) wrapH=window.innerHeight-200;
     var twByW=Math.floor(wrapW*2/(COLS+ROWS+1));
     var twByH=Math.floor((wrapH-WALL_H-56)*4/(COLS+ROWS));
-    TW=Math.max(40,Math.min(twByW,twByH,110));
+    TW=Math.max(40,Math.min(twByW,Math.max(twByH,40),180));
     TH=Math.floor(TW/2);
     OX=Math.round(ROWS*TW/2);
     OY=WALL_H;
@@ -730,7 +730,7 @@
     });
     var wrap=document.createElement('div');
     wrap.id='lrm-wrap';
-    wrap.style.cssText='flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:flex-start;background:#120c1a;';
+    wrap.style.cssText='flex:1;min-height:0;overflow:auto;display:flex;justify-content:center;align-items:center;background:#120c1a;';
     var cv=document.createElement('canvas');
     cv.id='lrm-canvas';
     cv.style.cssText='image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;display:block;';
@@ -823,6 +823,30 @@
       selectedId=(selectedId===w.dataset.itemId)?null:w.dataset.itemId;
       updatePalette(overlay);updateCarryBadge(overlay);
     });
+    // long-press palette item → assign sprite URL
+    var _lpTimer=null, _lpTarget=null;
+    function startLp(e){
+      var w=e.target.closest('[data-item-id]'); if(!w) return;
+      _lpTarget=w.dataset.itemId;
+      _lpTimer=setTimeout(function(){
+        _lpTimer=null;
+        var url=prompt('为「'+(_lpTarget)+'」输入精灵图 URL（PNG透明背景）：', SPRITES[_lpTarget]||'');
+        if(url===null) return;
+        url=url.trim();
+        if(url){ registerItem({id:_lpTarget,file:url}); }
+        else { delete SPRITES[_lpTarget]; }
+        // refresh thumb
+        var pw=overlay.querySelector('[data-item-id="'+_lpTarget+'"]');
+        if(pw){ var old=pw.querySelector('canvas'); if(old) pw.replaceChild(makePaletteThumb(ITEMS.filter(function(i){return i.id===_lpTarget;})[0]||{id:_lpTarget}),old); }
+        render();
+      },600);
+    }
+    function cancelLp(){ if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;} }
+    overlay.querySelector('#lrm-palette').addEventListener('touchstart',startLp,{passive:true});
+    overlay.querySelector('#lrm-palette').addEventListener('touchend',cancelLp);
+    overlay.querySelector('#lrm-palette').addEventListener('touchmove',cancelLp);
+    overlay.querySelector('#lrm-palette').addEventListener('mousedown',startLp);
+    overlay.querySelector('#lrm-palette').addEventListener('mouseup',cancelLp);
     function onTap(e){
       e.preventDefault();var t=getTile(e);
       if(t.row<0||t.row>=ROWS||t.col<0||t.col>=COLS) return;
