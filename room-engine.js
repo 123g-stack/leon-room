@@ -621,7 +621,10 @@
     DPR=Math.min(window.devicePixelRatio||1,3);
     var wrap=document.getElementById(ROOM_ID).querySelector('#lrm-wrap');
     var wrapW=wrap.clientWidth||window.innerWidth;
-    TW=Math.max(48,Math.min(Math.floor(wrapW*2/(COLS+ROWS+1)),80));
+    var wrapH=wrap.clientHeight||window.innerHeight;
+    var twByW=Math.floor(wrapW*2/(COLS+ROWS+1));
+    var twByH=Math.floor((wrapH-WALL_H-56)*4/(COLS+ROWS));
+    TW=Math.max(40,Math.min(twByW,twByH,110));
     TH=Math.floor(TW/2);
     OX=Math.round(ROWS*TW/2);
     OY=WALL_H;
