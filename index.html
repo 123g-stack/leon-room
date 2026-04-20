@@ -11,12 +11,20 @@
 </head>
 <body>
 <script src="room-engine.js"></script>
+<script src="room-config.js"></script>
 <script>
   window.addEventListener('load', function(){
     window.openLeonRoom();
-    // 独立页面隐藏返回按钮
     var back = document.getElementById('lrm-back');
     if(back) back.style.display = 'none';
+    // 让 overlay 和 wrap 撑满整个视口
+    var overlay = document.getElementById('leon-room-overlay');
+    if(overlay){
+      overlay.style.position = 'relative';
+      overlay.style.height = '100vh';
+      var wrap = document.getElementById('lrm-wrap');
+      if(wrap) wrap.style.width = '100%';
+    }
   });
 </script>
 </body>

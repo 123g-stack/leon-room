@@ -16,6 +16,12 @@
   var roomCanvas  = null;
   var roomCtx     = null;
 
+  /* ─── SPRITE SYSTEM ─── */
+  var SPRITES      = {};   // itemId -> url
+  var spriteCache  = {};   // url -> Image | null (null=failed/loading)
+  var BASE_TW      = 64;   // sprites designed at this tile width
+  var _renderQueued = false;
+
   /* ─── ROOM DEFS ─── */
   var ROOM_DEFS = [
     { id:'bedroom', name:'卧室',  icon:'🛏',
@@ -93,16 +99,46 @@
     c.fill();
   }
 
-  /* Draw isometric box spanning gridW x gridH tiles, boxH pixels tall */
+  /* Draw isometric box: top face at grid level, sides go DOWN */
   function isoBox(c, col, row, gridW, gridH, boxH, topCol, leftCol, rightCol) {
-    var a = gp(col, row), b = gp(col + gridW, row),
-        d = gp(col, row + gridH), e = gp(col + gridW, row + gridH);
-    poly(c, [a, b, e, d], topCol);
-    c.strokeStyle = 'rgba(0,0,0,0.10)'; c.lineWidth = 0.5; c.stroke();
-    poly(c, [d, e, {x:e.x,y:e.y+boxH}, {x:d.x,y:d.y+boxH}], leftCol);
-    c.stroke();
-    poly(c, [e, b, {x:b.x,y:b.y+boxH}, {x:e.x,y:e.y+boxH}], rightCol);
-    c.stroke();
+    var a=gp(col,row),b=gp(col+gridW,row),d=gp(col,row+gridH),e=gp(col+gridW,row+gridH);
+    poly(c,[a,b,e,d],topCol);
+    c.strokeStyle='rgba(0,0,0,0.10)';c.lineWidth=0.5;c.stroke();
+    poly(c,[d,e,{x:e.x,y:e.y+boxH},{x:d.x,y:d.y+boxH}],leftCol);c.stroke();
+    poly(c,[e,b,{x:b.x,y:b.y+boxH},{x:e.x,y:e.y+boxH}],rightCol);c.stroke();
+  }
+
+  /* Draw isometric box ABOVE grid level: sides go UP by height */
+  function isoBoxUp(c, col, row, gridW, gridH, height, topCol, leftCol, rightCol) {
+    var a=gp(col,row),b=gp(col+gridW,row),d=gp(col,row+gridH),e=gp(col+gridW,row+gridH);
+    var A={x:a.x,y:a.y-height},B={x:b.x,y:b.y-height},D={x:d.x,y:d.y-height},E={x:e.x,y:e.y-height};
+    poly(c,[A,B,E,D],topCol);
+    c.strokeStyle='rgba(0,0,0,0.10)';c.lineWidth=0.5;c.stroke();
+    poly(c,[D,E,e,d],leftCol);c.stroke();
+    poly(c,[E,B,b,e],rightCol);c.stroke();
+  }
+
+  function loadSprite(url) {
+    if (url in spriteCache) return;
+    spriteCache[url] = null;
+    var img = new Image();
+    img.onload = function() {
+      spriteCache[url] = img;
+      if (!_renderQueued) { _renderQueued = true; requestAnimationFrame(function(){ _renderQueued=false; render(); }); }
+    };
+    img.onerror = function() { spriteCache[url] = null; };
+    img.src = url;
+  }
+
+  function drawSprite(c, col, row, item, img) {
+    var scale = TW / BASE_TW;
+    var rw = Math.round(img.naturalWidth * scale);
+    var rh = Math.round(img.naturalHeight * scale);
+    // horizontal center of diamond footprint
+    var cx = OX + (col - row + (item.w - item.h) / 2) * TW / 2;
+    // bottom-most y of diamond footprint (front corner)
+    var by = OY + (col + item.w + row + item.h) * TH / 2;
+    c.drawImage(img, Math.round(cx - rw / 2), Math.round(by - rh), rw, rh);
   }
 
   function isoFlat(c, col, row, gridW, gridH, color) {
@@ -465,6 +501,12 @@
   function drawItemOnCanvas(c, p) {
     var item = ITEMS.filter(function(i){return i.id===p.id;})[0];
     if (!item) return;
+    var url = SPRITES[item.id];
+    if (url) {
+      if (!(url in spriteCache)) loadSprite(url);
+      if (spriteCache[url]) { drawSprite(c, p.col, p.row, item, spriteCache[url]); return; }
+      // sprite loading or failed → fall through to canvas drawing
+    }
     if (SPECIAL[item.id]) {
       SPECIAL[item.id](c, p.col, p.row, item);
     } else {
@@ -753,6 +795,57 @@
     else{badge.style.display='none';if(spacer)spacer.style.display='';}
   }
 
+  /* ─── PLUGIN API ─── */
+  function registerItem(cfg) {
+    if (!cfg || !cfg.id) return;
+    var existing = null;
+    for (var i = 0; i < ITEMS.length; i++) { if (ITEMS[i].id === cfg.id) { existing = ITEMS[i]; break; } }
+    if (!existing) {
+      ITEMS.push({ id:cfg.id, w:cfg.w||1, h:cfg.h||1, name:cfg.name||cfg.id });
+      if (cfg.height !== undefined) HH[cfg.id] = cfg.height;
+      if (cfg.colors) IC[cfg.id] = cfg.colors;
+    } else {
+      if (cfg.name) existing.name = cfg.name;
+      if (cfg.w)    existing.w    = cfg.w;
+      if (cfg.h)    existing.h    = cfg.h;
+      if (cfg.height !== undefined) HH[cfg.id] = cfg.height;
+      if (cfg.colors) IC[cfg.id] = cfg.colors;
+    }
+    if (cfg.file) { SPRITES[cfg.id] = cfg.file; loadSprite(cfg.file); }
+  }
+
+  function registerScene(cfg) {
+    if (!cfg || !cfg.id) return;
+    for (var i = 0; i < ROOM_DEFS.length; i++) {
+      if (ROOM_DEFS[i].id === cfg.id) {
+        var rd = ROOM_DEFS[i];
+        if (cfg.name)         rd.name         = cfg.name;
+        if (cfg.icon)         rd.icon         = cfg.icon;
+        if (cfg.wall)         rd.wall         = cfg.wall;
+        if (cfg.wallB)        rd.wallB        = cfg.wallB;
+        if (cfg.base)         rd.base         = cfg.base;
+        if (cfg.baseHi)       rd.baseHi       = cfg.baseHi;
+        if (cfg.floors)       rd.floors       = cfg.floors;
+        if (cfg.defaultFloor) rd.defaultFloor = cfg.defaultFloor;
+        if (cfg.items)        rd.items        = cfg.items;
+        return;
+      }
+    }
+    ROOM_DEFS.push({
+      id: cfg.id, name: cfg.name||cfg.id, icon: cfg.icon||'🏠',
+      wall: cfg.wall||'#ede5d8', wallB: cfg.wallB||'#d8cec4',
+      base: cfg.base||'#c4a880', baseHi: cfg.baseHi||'#d8bc98',
+      floors: cfg.floors||['wood'], defaultFloor: cfg.defaultFloor||'wood',
+      items: cfg.items||[]
+    });
+  }
+
+  function registerFloor(cfg) {
+    if (!cfg || !cfg.id) return;
+    for (var i = 0; i < FLOORS.length; i++) { if (FLOORS[i].id === cfg.id) return; }
+    FLOORS.push({ id:cfg.id, name:cfg.name||cfg.id, c:cfg.colors||['#c8c0b0','#b8b0a0'] });
+  }
+
   /* ─── PUBLIC ─── */
   function openRoom(){
     loadState();
@@ -764,5 +857,10 @@
     requestAnimationFrame(function(){resizeCanvas();render();});
   }
 
-  window.openLeonRoom=openRoom;
+  window.LeonRoom = {
+    registerItem:  registerItem,
+    registerScene: registerScene,
+    registerFloor: registerFloor
+  };
+  window.openLeonRoom = openRoom;
 }());
