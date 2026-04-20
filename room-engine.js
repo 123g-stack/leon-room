@@ -21,6 +21,8 @@
   var spriteCache  = {};   // url -> Image | null (null=failed/loading)
   var BASE_TW      = 64;   // sprites designed at this tile width
   var _renderQueued = false;
+  var overlayEl    = null;
+  var CUSTOM_KEY   = 'leonRoomCustomItems';
 
   /* ─── ROOM DEFS ─── */
   var ROOM_DEFS = [
@@ -521,6 +523,13 @@
     cv.width=cv.height=sz; cv.style.width=cv.style.height=sz+'px';
     cv.style.imageRendering='pixelated';
     var ctx=cv.getContext('2d');
+    var url=SPRITES[item.id];
+    if (url && spriteCache[url]) {
+      var img=spriteCache[url], sc=Math.min(sz/img.naturalWidth,sz/img.naturalHeight)*0.9;
+      var rw=Math.round(img.naturalWidth*sc), rh=Math.round(img.naturalHeight*sc);
+      ctx.drawImage(img,Math.round((sz-rw)/2),Math.round((sz-rh)/2),rw,rh);
+      return cv;
+    }
     var tw=sz*0.72, th=tw/2, ox2=sz/2, oy2=sz*0.18;
     var bh2=Math.min(HH[item.id]||20,sz*0.42), cols=ic(item.id);
     ctx.fillStyle=cols[0]; ctx.beginPath();
@@ -531,6 +540,14 @@
     ctx.fillStyle=cols[2]; ctx.beginPath();
     ctx.moveTo(ox2,oy2+th); ctx.lineTo(ox2+tw/2,oy2+th/2); ctx.lineTo(ox2+tw/2,oy2+th/2+bh2); ctx.lineTo(ox2,oy2+th+bh2); ctx.closePath(); ctx.fill(); ctx.stroke();
     return cv;
+  }
+
+  function buildPaletteWidget(item) {
+    var w=document.createElement('div');
+    w.style.cssText='flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:3px;border-radius:8px;border:2px solid transparent;';
+    w.dataset.itemId=item.id; w.appendChild(makePaletteThumb(item));
+    var lbl=document.createElement('span'); lbl.style.cssText='font-size:9px;color:#ffddeb;white-space:nowrap;'; lbl.textContent=item.name; w.appendChild(lbl);
+    return w;
   }
 
   /* ─── BACKGROUND ─── */
@@ -672,9 +689,13 @@
   function updatePalette(overlay){
     var rd=getRoomDef();
     overlay.querySelectorAll('[data-item-id]').forEach(function(w){
-      w.style.display=rd.items.indexOf(w.dataset.itemId)>=0?'':'none';
-      w.style.borderColor=w.dataset.itemId===selectedId?'#ff88aa':'transparent';
-      w.style.background=w.dataset.itemId===selectedId?'rgba(255,136,170,.15)':'';
+      var iid=w.dataset.itemId;
+      var item=ITEMS.filter(function(i){return i.id===iid;})[0];
+      var inRoom=rd.items.indexOf(iid)>=0;
+      var isCustom=item&&item._custom;
+      w.style.display=(inRoom||isCustom)?'':'none';
+      w.style.borderColor=iid===selectedId?'#ff88aa':'transparent';
+      w.style.background=iid===selectedId?'rgba(255,136,170,.15)':'';
     });
   }
 
@@ -724,14 +745,42 @@
     });
     var pal=document.createElement('div');
     pal.id='lrm-palette';
-    pal.style.cssText='display:flex;gap:5px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;';
-    ITEMS.forEach(function(item){
-      var w=document.createElement('div');
-      w.style.cssText='flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:3px;border-radius:8px;border:2px solid transparent;';
-      w.dataset.itemId=item.id; w.appendChild(makePaletteThumb(item));
-      var lbl=document.createElement('span'); lbl.style.cssText='font-size:9px;color:#ffddeb;white-space:nowrap;'; lbl.textContent=item.name; w.appendChild(lbl);
-      pal.appendChild(w);
-    });
+    pal.style.cssText='display:flex;gap:5px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;align-items:center;';
+    ITEMS.forEach(function(item){ pal.appendChild(buildPaletteWidget(item)); });
+    // "+" add custom item button
+    var addBtn=document.createElement('button');
+    addBtn.id='lrm-add-btn';
+    addBtn.style.cssText='flex-shrink:0;width:44px;height:54px;border:2px dashed rgba(255,182,214,.5);border-radius:8px;background:rgba(255,255,255,.05);color:#ffddeb;font-size:22px;cursor:pointer;';
+    addBtn.textContent='+'; pal.appendChild(addBtn);
+
+    // custom item modal
+    var modal=document.createElement('div');
+    modal.id='lrm-modal';
+    modal.style.cssText='display:none;position:absolute;inset:0;z-index:10;background:rgba(10,6,20,.82);align-items:center;justify-content:center;';
+    modal.innerHTML=
+      '<div style="background:#2a1840;border-radius:16px;padding:20px 18px;width:min(320px,90vw);display:flex;flex-direction:column;gap:10px;">'+
+        '<div style="font-size:14px;font-weight:700;color:#ff88aa;margin-bottom:2px;">✦ 添加自定义物品</div>'+
+        '<input id="lrm-m-url" placeholder="图片 URL（PNG 透明背景）" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,182,214,.4);background:#1a1030;color:#fff;font-size:12px;width:100%;"/>'+
+        '<div id="lrm-m-preview" style="height:80px;border-radius:8px;background:#120c20;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:11px;overflow:hidden;">图片预览</div>'+
+        '<input id="lrm-m-name" placeholder="名称（如：披萨🍕）" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,182,214,.4);background:#1a1030;color:#fff;font-size:12px;width:100%;"/>'+
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<span style="font-size:11px;color:#ccbbdd;flex-shrink:0;">占格</span>'+
+          '<select id="lrm-m-size" style="flex:1;padding:6px 8px;border-radius:8px;border:1px solid rgba(255,182,214,.4);background:#1a1030;color:#fff;font-size:12px;">'+
+            '<option value="1,1">1×1（小物品）</option>'+
+            '<option value="2,1">2×1（横向）</option>'+
+            '<option value="1,2">1×2（纵向）</option>'+
+            '<option value="2,2" selected>2×2（普通家具）</option>'+
+            '<option value="3,2">3×2（大家具）</option>'+
+            '<option value="2,3">2×3（高家具）</option>'+
+          '</select>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;margin-top:4px;">'+
+          '<button id="lrm-m-cancel" style="flex:1;height:36px;border:1px solid rgba(255,182,214,.35);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font-size:13px;cursor:pointer;">取消</button>'+
+          '<button id="lrm-m-add" style="flex:2;height:36px;border:none;border-radius:10px;background:#ff88aa;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">加入小屋</button>'+
+        '</div>'+
+      '</div>';
+    el.style.position='relative'; el.appendChild(modal);
+
     bot.appendChild(floorRow); bot.appendChild(pal);
     el.appendChild(hdr); el.appendChild(tabs); el.appendChild(wrap); el.appendChild(bot);
     document.body.appendChild(el); return el;
@@ -786,6 +835,89 @@
     }
     overlay.querySelector('#lrm-canvas').addEventListener('touchstart',onTap,{passive:false});
     overlay.querySelector('#lrm-canvas').addEventListener('click',onTap);
+
+    // modal
+    overlay.querySelector('#lrm-add-btn').addEventListener('click',function(){
+      overlay.querySelector('#lrm-modal').style.display='flex';
+    });
+    overlay.querySelector('#lrm-m-cancel').addEventListener('click',function(){
+      overlay.querySelector('#lrm-modal').style.display='none';
+    });
+    overlay.querySelector('#lrm-m-url').addEventListener('input',function(){
+      var url=this.value.trim(), prev=overlay.querySelector('#lrm-m-preview');
+      if(url){ prev.style.cssText='height:80px;border-radius:8px;background:#120c20 center/contain no-repeat;overflow:hidden;'; prev.style.backgroundImage='url('+url+')'; prev.textContent=''; }
+      else { prev.style.backgroundImage=''; prev.textContent='图片预览'; }
+    });
+    overlay.querySelector('#lrm-m-add').addEventListener('click',function(){ addCustomItemFromModal(overlay); });
+    overlay.querySelector('#lrm-modal').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+  }
+
+  function saveCustomItems() {
+    try {
+      var list=ITEMS.filter(function(i){return i._custom;}).map(function(i){
+        return {id:i.id,name:i.name,w:i.w,h:i.h,file:SPRITES[i.id],height:HH[i.id]||20};
+      });
+      localStorage.setItem(CUSTOM_KEY,JSON.stringify(list));
+    } catch(e) {}
+  }
+
+  function loadCustomItems() {
+    try {
+      var list=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]');
+      list.forEach(function(cfg){
+        registerItem(cfg);
+        var item=ITEMS.filter(function(i){return i.id===cfg.id;})[0];
+        if(item) item._custom=true;
+        if(overlayEl){
+          var pal=overlayEl.querySelector('#lrm-palette');
+          if(!pal.querySelector('[data-item-id="'+cfg.id+'"]')){
+            pal.insertBefore(buildPaletteWidget(item),overlayEl.querySelector('#lrm-add-btn'));
+          }
+        }
+      });
+    } catch(e) {}
+  }
+
+  function addCustomItemFromModal(overlay) {
+    var urlEl=overlay.querySelector('#lrm-m-url');
+    var nameEl=overlay.querySelector('#lrm-m-name');
+    var sizeEl=overlay.querySelector('#lrm-m-size');
+    var url=urlEl.value.trim(), name=nameEl.value.trim();
+    if(!url||!name){alert('请填写图片URL和名称');return;}
+    var parts=sizeEl.value.split(','), w=parseInt(parts[0]), h=parseInt(parts[1]);
+    var id='custom_'+(name.replace(/[^a-z0-9]/gi,'_')||Date.now());
+    // ensure unique id
+    while(ITEMS.some(function(i){return i.id===id;})) id+='_';
+    var cfg={id:id,name:name,file:url,w:w,h:h,height:Math.round((w+h)*16)};
+    registerItem(cfg);
+    var item=ITEMS.filter(function(i){return i.id===id;})[0];
+    item._custom=true;
+    var pal=overlay.querySelector('#lrm-palette');
+    // wait for sprite to load then build widget with sprite thumbnail
+    var addToUI=function(){
+      if(!pal.querySelector('[data-item-id="'+id+'"]'))
+        pal.insertBefore(buildPaletteWidget(item),overlay.querySelector('#lrm-add-btn'));
+      updatePalette(overlay);
+    };
+    if(spriteCache[url]) { addToUI(); }
+    else {
+      addToUI();
+      // refresh thumb once loaded
+      var check=setInterval(function(){
+        if(spriteCache[url]){
+          clearInterval(check);
+          var w2=pal.querySelector('[data-item-id="'+id+'"]');
+          if(w2){ var old=w2.querySelector('canvas'); if(old) w2.replaceChild(makePaletteThumb(item),old); }
+        }
+      },200);
+    }
+    saveCustomItems();
+    overlay.querySelector('#lrm-modal').style.display='none';
+    selectedId=id; updatePalette(overlay); updateCarryBadge(overlay);
+    // clear modal fields
+    urlEl.value=''; nameEl.value='';
+    overlay.querySelector('#lrm-m-preview').innerHTML='图片预览';
+    overlay.querySelector('#lrm-m-preview').style.backgroundImage='';
   }
 
   function updateCarryBadge(overlay){
@@ -849,8 +981,8 @@
   /* ─── PUBLIC ─── */
   function openRoom(){
     loadState();
-    var overlay=document.getElementById(ROOM_ID);
-    if(!overlay){overlay=buildOverlay();wireEvents(overlay);}
+    if(!overlayEl){overlayEl=buildOverlay();wireEvents(overlayEl);loadCustomItems();}
+    var overlay=overlayEl;
     overlay.style.display='flex';document.body.style.overflow='hidden';
     roomCanvas=overlay.querySelector('#lrm-canvas');
     updateRoomTabs(overlay);updateFloorRow(overlay);updatePalette(overlay);updateCarryBadge(overlay);
