@@ -133,8 +133,11 @@
   }
 
   function drawSprite(c, col, row, item, img) {
-    var scale = TW / BASE_TW;
-    var rw = Math.round(img.naturalWidth * scale);
+    // scale so sprite width = diamond footprint width, then apply user scale
+    var footW = (item.w + item.h) * TW / 2;
+    var userScale = item.spriteScale || 1;
+    var scale = footW / img.naturalWidth * userScale;
+    var rw = Math.round(footW * userScale);
     var rh = Math.round(img.naturalHeight * scale);
     // horizontal center of diamond footprint
     var cx = OX + (col - row + (item.w - item.h) / 2) * TW / 2;
@@ -622,16 +625,18 @@
     var wrap=document.getElementById(ROOM_ID).querySelector('#lrm-wrap');
     var wrapW=wrap.clientWidth||window.innerWidth;
     var wrapH=wrap.clientHeight; if(wrapH<100) wrapH=window.innerHeight-200;
-    var twByW=Math.floor(wrapW*2/(COLS+ROWS+1));
-    var twByH=Math.floor((wrapH-WALL_H-56)*4/(COLS+ROWS));
-    TW=Math.max(40,Math.min(twByW,Math.max(twByH,40),180));
+    // logical TW based on width (good touch target size)
+    TW=Math.max(40,Math.min(Math.floor(wrapW*2/(COLS+ROWS+1)),80));
     TH=Math.floor(TW/2);
     OX=Math.round(ROWS*TW/2);
     OY=WALL_H;
     CW=OX+Math.round(COLS*TW/2)+TW/2;
     CH=OY+Math.round((COLS+ROWS)*TH/2)+56;
+    // scale display size to fill wrap (touch coords handled via rect.width ratio)
+    var dispScale=Math.min(wrapW/CW, wrapH/CH);
+    var dispW=Math.round(CW*dispScale), dispH=Math.round(CH*dispScale);
     roomCanvas.width=Math.round(CW*DPR); roomCanvas.height=Math.round(CH*DPR);
-    roomCanvas.style.width=CW+'px'; roomCanvas.style.height=CH+'px';
+    roomCanvas.style.width=dispW+'px'; roomCanvas.style.height=dispH+'px';
     roomCtx=roomCanvas.getContext('2d'); roomCtx.scale(DPR,DPR);
   }
 
@@ -775,7 +780,13 @@
             '<option value="2,2" selected>2×2（普通家具）</option>'+
             '<option value="3,2">3×2（大家具）</option>'+
             '<option value="2,3">2×3（高家具）</option>'+
+            '<option value="3,3">3×3（超大）</option>'+
           '</select>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<span style="font-size:11px;color:#ccbbdd;flex-shrink:0;">缩放</span>'+
+          '<input id="lrm-m-scale" type="range" min="0.3" max="2.0" step="0.1" value="1.0" style="flex:1;"/>'+
+          '<span id="lrm-m-scale-val" style="font-size:11px;color:#ffddeb;width:28px;">1.0×</span>'+
         '</div>'+
         '<div style="display:flex;gap:8px;margin-top:4px;">'+
           '<button id="lrm-m-cancel" style="flex:1;height:36px;border:1px solid rgba(255,182,214,.35);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font-size:13px;cursor:pointer;">取消</button>'+
@@ -877,12 +888,13 @@
     });
     overlay.querySelector('#lrm-m-add').addEventListener('click',function(){ addCustomItemFromModal(overlay); });
     overlay.querySelector('#lrm-modal').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+    overlay.querySelector('#lrm-m-scale').addEventListener('input',function(){ overlay.querySelector('#lrm-m-scale-val').textContent=parseFloat(this.value).toFixed(1)+'×'; });
   }
 
   function saveCustomItems() {
     try {
       var list=ITEMS.filter(function(i){return i._custom;}).map(function(i){
-        return {id:i.id,name:i.name,w:i.w,h:i.h,file:SPRITES[i.id],height:HH[i.id]||20};
+        return {id:i.id,name:i.name,w:i.w,h:i.h,file:SPRITES[i.id],height:HH[i.id]||20,spriteScale:i.spriteScale||1};
       });
       localStorage.setItem(CUSTOM_KEY,JSON.stringify(list));
     } catch(e) {}
@@ -912,10 +924,10 @@
     var url=urlEl.value.trim(), name=nameEl.value.trim();
     if(!url||!name){alert('请填写图片URL和名称');return;}
     var parts=sizeEl.value.split(','), w=parseInt(parts[0]), h=parseInt(parts[1]);
+    var sprScale=parseFloat(overlay.querySelector('#lrm-m-scale').value||1);
     var id='custom_'+(name.replace(/[^a-z0-9]/gi,'_')||Date.now());
-    // ensure unique id
     while(ITEMS.some(function(i){return i.id===id;})) id+='_';
-    var cfg={id:id,name:name,file:url,w:w,h:h,height:Math.round((w+h)*16)};
+    var cfg={id:id,name:name,file:url,w:w,h:h,height:Math.round((w+h)*16),spriteScale:sprScale};
     registerItem(cfg);
     var item=ITEMS.filter(function(i){return i.id===id;})[0];
     item._custom=true;
@@ -960,13 +972,14 @@
     var existing = null;
     for (var i = 0; i < ITEMS.length; i++) { if (ITEMS[i].id === cfg.id) { existing = ITEMS[i]; break; } }
     if (!existing) {
-      ITEMS.push({ id:cfg.id, w:cfg.w||1, h:cfg.h||1, name:cfg.name||cfg.id });
+      ITEMS.push({ id:cfg.id, w:cfg.w||1, h:cfg.h||1, name:cfg.name||cfg.id, spriteScale:cfg.spriteScale||1 });
       if (cfg.height !== undefined) HH[cfg.id] = cfg.height;
       if (cfg.colors) IC[cfg.id] = cfg.colors;
     } else {
       if (cfg.name) existing.name = cfg.name;
       if (cfg.w)    existing.w    = cfg.w;
       if (cfg.h)    existing.h    = cfg.h;
+      if (cfg.spriteScale !== undefined) existing.spriteScale = cfg.spriteScale;
       if (cfg.height !== undefined) HH[cfg.id] = cfg.height;
       if (cfg.colors) IC[cfg.id] = cfg.colors;
     }
